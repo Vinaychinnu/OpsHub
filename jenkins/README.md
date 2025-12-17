@@ -24,14 +24,12 @@ The installation script supports the following operating systems:
 - Ubuntu / Debian-based systems
 - Amazon Linux 2
 
-The script will prompt the user to select the OS during execution.
-
 ---
 
 ## Files
 
 - install-jenkins.sh  
-  Interactive script that installs Jenkins based on the selected OS.
+  Script that installs Jenkins based on the selected OS.
 
 ---
 
@@ -42,7 +40,6 @@ The script will prompt the user to select the OS during execution.
     chmod +x install-jenkins.sh
     ./install-jenkins.sh
 
-During execution, you will be prompted to select your OS type.
 
 ---
 
