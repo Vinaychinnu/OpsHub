@@ -1,24 +1,30 @@
 # RBAC
 
-This directory contains a minimal Role-Based Access Control (RBAC) setup used to verify and debug namespace-scoped permissions in Kubernetes.
+This directory contains a minimal Role-Based Access Control (RBAC) setup used to verify and debug both **namespace-scoped** and **cluster-scoped** permissions in Kubernetes.
 
-The resources here demonstrate how access is explicitly granted and denied using ServiceAccounts, Roles, and RoleBindings.
+The resources here demonstrate how access is explicitly granted and denied using ServiceAccounts, Roles, ClusterRoles, and their bindings.
 
 ---
 
 ## Scope
 
-This setup is intentionally limited to:
-- A single namespace (`rbac-demo`)
-- Read-only access to Pod resources
+This setup covers two RBAC scopes:
 
-It is designed to validate RBAC behavior, not to provide production-wide permissions.
+- Namespace-scoped access using:
+  - Role
+  - RoleBinding
+
+- Cluster-wide access using:
+  - ClusterRole
+  - ClusterRoleBinding
+
+All examples use **read-only access to Pod resources** to clearly demonstrate permission boundaries.
 
 ---
 
 ## Namespace
 
-All RBAC resources in this directory are scoped to the following namespace:
+RBAC resources that are namespace-scoped use the following namespace:
 
     rbac-demo
 
@@ -34,36 +40,49 @@ Create the namespace before applying RBAC resources:
   Defines a ServiceAccount used as an identity for access testing.
 
 - role.yaml  
-  Defines a Role that allows read-only access to Pod resources.
+  Defines a Role that allows read-only access to Pod resources within a single namespace.
 
 - rolebinding.yaml  
   Binds the Role to the ServiceAccount within the namespace.
+
+- clusterrole.yaml  
+  Defines a ClusterRole that allows read-only access to Pod resources across all namespaces.
+
+- clusterrolebinding.yaml  
+  Binds the ClusterRole to the ServiceAccount at the cluster level.
 
 ---
 
 ## Apply resources
 
-Apply the RBAC resources in order:
+Apply the namespace-scoped RBAC resources first:
 
     kubectl apply -f serviceaccount.yaml
     kubectl apply -f role.yaml
     kubectl apply -f rolebinding.yaml
+
+Apply the cluster-scoped RBAC resources:
+
+    kubectl apply -f clusterrole.yaml
+    kubectl apply -f clusterrolebinding.yaml
 
 Verify:
 
     kubectl get sa -n rbac-demo
     kubectl get role -n rbac-demo
     kubectl get rolebinding -n rbac-demo
+    kubectl get clusterrole
+    kubectl get clusterrolebinding
 
 ---
 
 ## Permission verification
 
-Use `kubectl auth can-i` to validate access.
+Use `kubectl auth can-i` to validate effective permissions.
 
-### Allowed action
+### Namespace-scoped access
 
-Verify that the ServiceAccount can list pods:
+Verify that the ServiceAccount can list pods in its own namespace:
 
     kubectl auth can-i list pods \
       --as=system:serviceaccount:rbac-demo:demo-sa \
@@ -73,11 +92,7 @@ Expected result:
 
     yes
 
----
-
-### Forbidden action
-
-Verify that the ServiceAccount cannot delete pods:
+Verify that destructive actions are denied:
 
     kubectl auth can-i delete pods \
       --as=system:serviceaccount:rbac-demo:demo-sa \
@@ -87,7 +102,21 @@ Expected result:
 
     no
 
-This confirms that RBAC rules are enforced correctly.
+---
+
+### Cluster-scoped access
+
+Verify that the ServiceAccount can list pods across all namespaces:
+
+    kubectl auth can-i list pods \
+      --as=system:serviceaccount:rbac-demo:demo-sa \
+      --all-namespaces
+
+Expected result:
+
+    yes
+
+This confirms that ClusterRole and ClusterRoleBinding are effective.
 
 ---
 
@@ -95,16 +124,22 @@ This confirms that RBAC rules are enforced correctly.
 
 This setup can be used to:
 
-- Validate RBAC changes before applying them broadly
+- Validate RBAC behavior before applying changes broadly
 - Debug "Forbidden" errors returned by Kubernetes APIs
-- Understand the effective permissions of a ServiceAccount
+- Understand the difference between Role and ClusterRole
+- Verify the impact of RoleBinding vs ClusterRoleBinding
 - Demonstrate least-privilege access patterns
 
 ---
 
 ## Cleanup
 
-To remove all RBAC resources created by this setup:
+Remove cluster-scoped resources first:
+
+    kubectl delete -f clusterrolebinding.yaml
+    kubectl delete -f clusterrole.yaml
+
+Remove namespace-scoped resources:
 
     kubectl delete -f rolebinding.yaml
     kubectl delete -f role.yaml
